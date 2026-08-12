@@ -67,11 +67,18 @@ async function findSpotifyArtistId(name, token) {
 }
 
 async function getRecentReleases(spotifyArtistId, token, sinceIso) {
-  const url = `https://api.spotify.com/v1/artists/${spotifyArtistId}/albums?include_groups=single,album&market=IL&limit=20`;
-  const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
-  if (!res.ok) return [];
-  const json = await res.json();
-  return (json.items || []).filter((album) => album.release_date >= sinceIso);
+  const all = [];
+  let url = `https://api.spotify.com/v1/artists/${spotifyArtistId}/albums?include_groups=single,album&market=IL&limit=50`;
+  // Follows Spotify's pagination so a full-catalog backfill (LOOKBACK_DAYS set very high) actually
+  // sees an artist's whole discography, not just the first 50 releases.
+  while (url) {
+    const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+    if (!res.ok) break;
+    const json = await res.json();
+    all.push(...(json.items || []));
+    url = json.next;
+  }
+  return all.filter((album) => album.release_date >= sinceIso);
 }
 
 async function getAlbumTracks(albumId, token) {
@@ -109,7 +116,14 @@ async function main() {
     process.env.SPOTIFY_CLIENT_SECRET
   );
 
-  const sinceIso = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const lookbackDays = parseInt(process.env.LOOKBACK_DAYS || "8", 10);
+  const sinceIso = new Date(Date.now() - lookbackDays * 24 * 60 * 60 * 1000)
+    .toISOString()
+    .slice(0, 10);
+  // A brand-new artist (no cached spotifyArtistId yet, e.g. just added in the admin panel) always
+  // gets their entire existing catalog backfilled once, regardless of LOOKBACK_DAYS - so you never
+  // have to remember to trigger a manual full scan after adding someone new.
+  const FULL_CATALOG_SINCE = "1900-01-01";
   const artistsSnap = await db.collection("artists").get();
   const existingSongsSnap = await db.collection("songs").get();
   const existingKeys = new Set(
@@ -123,16 +137,22 @@ async function main() {
     const artist = artistDoc.data();
     let spotifyArtistId = artist.spotifyArtistId;
     let genres = artist.spotifyGenres || [];
+    let isNewArtist = false;
 
     if (!spotifyArtistId) {
       const found = await findSpotifyArtistId(artist.name, token);
       if (!found) continue;
       spotifyArtistId = found.id;
       genres = found.genres;
+      isNewArtist = true;
       await artistDoc.ref.update({ spotifyArtistId, spotifyGenres: genres });
     }
 
-    const releases = await getRecentReleases(spotifyArtistId, token, sinceIso);
+    const releases = await getRecentReleases(
+      spotifyArtistId,
+      token,
+      isNewArtist ? FULL_CATALOG_SINCE : sinceIso
+    );
     for (const album of releases) {
       const tracks = await getAlbumTracks(album.id, token);
       for (const track of tracks) {
