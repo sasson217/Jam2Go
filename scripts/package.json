@@ -1,0 +1,10 @@
+{
+  "name": "jam2go-weekly-song-discovery",
+  "private": true,
+  "scripts": {
+    "start": "node weeklySongDiscovery.js"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.6.0"
+  }
+}
