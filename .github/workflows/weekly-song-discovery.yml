@@ -1,9 +1,24 @@
 name: Weekly Song Discovery
 
+# Runs scripts/weeklySongDiscovery.js on a weekly schedule - the free alternative to a Firebase
+# scheduled Cloud Function, since Firebase Secret Manager and Cloud Functions deployment both
+# require the paid Blaze plan with a billing account attached. This runs on GitHub's free Actions
+# minutes instead and talks to Firestore directly with a service account key (see README for the
+# one-time setup: three repository secrets need to be added under Settings > Secrets and
+# variables > Actions).
 on:
   schedule:
-    - cron: "0 3 * * 1"
-  workflow_dispatch: {}
+    - cron: "0 3 * * 1" # every Monday, ~06:00 Israel time
+  workflow_dispatch:
+    inputs:
+      lookback_days:
+        description: >-
+          Days back to scan for existing (already-known) artists. Leave as 8 for a normal check.
+          Set to a huge number (e.g. 36500) to force a one-time full-catalog backfill for every
+          artist, not just brand-new ones. Newly-added artists (no cached Spotify id yet) always
+          get their whole catalog backfilled automatically, regardless of this value.
+        required: false
+        default: "8"
 
 jobs:
   discover:
@@ -28,3 +43,4 @@ jobs:
           SPOTIFY_CLIENT_ID: ${{ secrets.SPOTIFY_CLIENT_ID }}
           SPOTIFY_CLIENT_SECRET: ${{ secrets.SPOTIFY_CLIENT_SECRET }}
           FIREBASE_SERVICE_ACCOUNT_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_KEY }}
+          LOOKBACK_DAYS: ${{ github.event.inputs.lookback_days || '8' }}
