@@ -52,7 +52,10 @@ async function getSpotifyAccessToken(clientId, clientSecret) {
     },
     body: "grant_type=client_credentials"
   });
-  if (!res.ok) throw new Error(`Spotify auth failed: ${res.status}`);
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`Spotify auth failed: ${res.status} - ${body}`);
+  }
   const json = await res.json();
   return json.access_token;
 }
@@ -111,9 +114,12 @@ async function tryFindTab4uLink(songName, artistName) {
 
 async function main() {
   const db = admin.firestore();
+  // .trim() defends against stray whitespace/newlines that copy-paste into a GitHub secret can
+  // introduce - Spotify's token endpoint rejects the whole request on any mismatch, so even one
+  // extra character breaks auth.
   const token = await getSpotifyAccessToken(
-    process.env.SPOTIFY_CLIENT_ID,
-    process.env.SPOTIFY_CLIENT_SECRET
+    (process.env.SPOTIFY_CLIENT_ID || "").trim(),
+    (process.env.SPOTIFY_CLIENT_SECRET || "").trim()
   );
 
   const lookbackDays = parseInt(process.env.LOOKBACK_DAYS || "8", 10);
