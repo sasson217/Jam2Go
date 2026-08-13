@@ -1,0 +1,35 @@
+name: Seed Database
+
+# One-time (or re-runnable) trigger for seed/seed.js - populates the 95 starter artists, a small
+# starter song catalog, and the 6 "jam by mood" categories. Safe to re-run: seed.js uses
+# deterministic document ids, so it updates existing docs instead of duplicating them.
+# Trigger manually from the Actions tab (this isn't meant to run on a schedule).
+on:
+  workflow_dispatch: {}
+
+jobs:
+  seed:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        run: npm install
+        working-directory: seed
+
+      - name: Write Firebase service account key
+        run: echo "$FIREBASE_SERVICE_ACCOUNT_KEY" > "$RUNNER_TEMP/serviceAccountKey.json"
+        env:
+          FIREBASE_SERVICE_ACCOUNT_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_KEY }}
+
+      - name: Run seed script
+        run: node seed.js
+        working-directory: seed
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/serviceAccountKey.json
