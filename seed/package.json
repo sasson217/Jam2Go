@@ -1,0 +1,10 @@
+{
+  "name": "jam2go-seed",
+  "private": true,
+  "scripts": {
+    "seed": "node seed.js"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.6.0"
+  }
+}
