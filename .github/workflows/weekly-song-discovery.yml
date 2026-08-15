@@ -8,7 +8,7 @@ name: Weekly Song Discovery
 # variables > Actions).
 on:
   schedule:
-    - cron: "0 3 * * 1" # every Monday, ~06:00 Israel time
+    - cron: "0 3 * * 0" # every Sunday ~06:00 Israel time (motzei Shabbat)
   workflow_dispatch:
     inputs:
       lookback_days:
