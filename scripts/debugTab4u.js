@@ -29,29 +29,31 @@ async function dump(label, url) {
     console.log(`form tags (${forms.length}):`);
     forms.forEach((f) => console.log("  " + f));
 
-    // Any href containing "/tabs/songs/" - a real result link, if present anywhere on the page.
-    const songLinks = [...html.matchAll(/href="(\/tabs\/songs\/[^"]+)"/g)].map((m) => m[1]);
-    console.log(`song links found (${songLinks.length}):`);
-    songLinks.slice(0, 5).forEach((l) => console.log("  " + l));
+    // Any href at all - so we can see the real link pattern used for results, whatever it is.
+    const allHrefs = [...html.matchAll(/href="([^"]+)"/g)].map((m) => m[1]);
+    const interesting = allHrefs.filter((h) => !h.match(/\.(css|js|ico|svg|png|jpg)/) && h !== "" && h !== "#");
+    console.log(`non-asset hrefs (${interesting.length}):`);
+    interesting.slice(0, 40).forEach((l) => console.log("  " + l));
+
+    // Locate the song/artist name itself in the body and print surrounding context - this shows
+    // us exactly how a real result row is marked up, if one is present at all.
+    const idx = html.indexOf("תתארו");
+    if (idx >= 0) {
+      console.log(`found "תתארו" at index ${idx}, context:`);
+      console.log(html.slice(Math.max(0, idx - 400), idx + 400));
+    } else {
+      console.log(`"תתארו" not found anywhere in the HTML body`);
+    }
   } catch (err) {
     console.log(`fetch error: ${err.message}`);
   }
 }
 
 async function main() {
-  // Known song, should definitely exist on Tab4U if the site is reachable and parseable.
-  await dump(
-    "search ac=: שלמה ארצי תתארו לכם",
-    `https://www.tab4u.com/resultsSimple.php?ac=${encodeURIComponent("שלמה ארצי תתארו לכם")}`
-  );
-  // Try a few other plausible parameter names in case "ac" isn't the real one.
+  // The one that worked: title correctly showed the song+artist name.
   await dump(
     "search q=: שלמה ארצי תתארו לכם",
     `https://www.tab4u.com/resultsSimple.php?q=${encodeURIComponent("שלמה ארצי תתארו לכם")}`
-  );
-  await dump(
-    "search search=: שלמה ארצי תתארו לכם",
-    `https://www.tab4u.com/resultsSimple.php?search=${encodeURIComponent("שלמה ארצי תתארו לכם")}`
   );
 }
 
