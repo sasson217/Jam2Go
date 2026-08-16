@@ -87,6 +87,10 @@ async function getRecentReleases(spotifyArtistId, token, sinceIso) {
   return all.filter((album) => album.release_date >= sinceIso);
 }
 
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 async function getAlbumTracks(albumId, token) {
   const url = `https://api.spotify.com/v1/albums/${albumId}/tracks?market=IL&limit=20`;
   const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
@@ -148,6 +152,11 @@ async function main() {
   let queued = 0;
 
   for (const artistDoc of artistsSnap.docs) {
+    // Spotify's rate limit is a rolling 30-second window, not a fixed daily quota (confirmed via
+    // Spotify's own docs) - a pause here is enough to stay under it even for ~100 artists,
+    // and is what actually caused every request to fail with 429 QUOTA_EXCEEDED before this fix.
+    await sleep(350);
+
     const artist = artistDoc.data();
     let spotifyArtistId = artist.spotifyArtistId;
     let genres = artist.spotifyGenres || [];
