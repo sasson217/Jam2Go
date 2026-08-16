@@ -76,7 +76,10 @@ async function getRecentReleases(spotifyArtistId, token, sinceIso) {
   // sees an artist's whole discography, not just the first 50 releases.
   while (url) {
     const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
-    if (!res.ok) break;
+    if (!res.ok) {
+      console.log(`    getRecentReleases failed: ${res.status} ${res.statusText} - ${await res.text()}`);
+      break;
+    }
     const json = await res.json();
     all.push(...(json.items || []));
     url = json.next;
