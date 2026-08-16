@@ -136,6 +136,8 @@ async function main() {
     existingSongsSnap.docs.map((d) => `${d.data().artistName}__${d.data().name}`.toLowerCase())
   );
 
+  console.log(`Loaded ${artistsSnap.docs.length} artist(s), ${existingKeys.size} known song key(s). sinceIso=${sinceIso}`);
+
   let published = 0;
   let queued = 0;
 
@@ -147,7 +149,10 @@ async function main() {
 
     if (!spotifyArtistId) {
       const found = await findSpotifyArtistId(artist.name, token);
-      if (!found) continue;
+      if (!found) {
+        console.log(`  [${artist.name}] no Spotify artist match found, skipping`);
+        continue;
+      }
       spotifyArtistId = found.id;
       genres = found.genres;
       isNewArtist = true;
@@ -159,8 +164,10 @@ async function main() {
       token,
       isNewArtist ? FULL_CATALOG_SINCE : sinceIso
     );
+    let trackCount = 0;
     for (const album of releases) {
       const tracks = await getAlbumTracks(album.id, token);
+      trackCount += tracks.length;
       for (const track of tracks) {
         const key = `${artist.name}__${track.name}`.toLowerCase();
         if (existingKeys.has(key)) continue;
@@ -196,6 +203,7 @@ async function main() {
         }
       }
     }
+    console.log(`  [${artist.name}] spotifyArtistId=${spotifyArtistId} releases=${releases.length} tracks=${trackCount}`);
   }
 
   console.log(`Done. Published ${published} song(s) automatically, queued ${queued} for manual review.`);
