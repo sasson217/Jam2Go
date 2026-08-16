@@ -24,17 +24,20 @@ function slug(text) {
 // against Tab4U's own search endpoint, not a guess. Reused here so every song from the owner's
 // list gets a real chord link automatically instead of being left for manual entry.
 const TAB4U_SEARCH_URL = "https://www.tab4u.com/resultsSimple.php";
-const TAB4U_RESULT_LINK_PATTERN = /href="(\/tabs\/songs\/[^"]+\.html)"/;
+// Confirmed against the live site: the search query param is "q" (not "ac"), and result hrefs are
+// written WITHOUT a leading slash ("tabs/songs/...html", not "/tabs/songs/...html") - both silently
+// broke every previous lookup (0% hit rate) despite the site itself working fine.
+const TAB4U_RESULT_LINK_PATTERN = /href="(tabs\/songs\/[^"]+\.html)"/;
 
 async function tryFindTab4uLink(songName, artistName) {
   try {
     const query = `${artistName} ${songName}`;
-    const url = `${TAB4U_SEARCH_URL}?ac=${encodeURIComponent(query)}`;
+    const url = `${TAB4U_SEARCH_URL}?q=${encodeURIComponent(query)}`;
     const res = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0" } });
     if (!res.ok) return "";
     const html = await res.text();
     const match = html.match(TAB4U_RESULT_LINK_PATTERN);
-    return match ? `https://www.tab4u.com${match[1]}` : "";
+    return match ? `https://www.tab4u.com/${match[1]}` : "";
   } catch (err) {
     console.warn(`Tab4U search failed for "${songName}" (${artistName}):`, err.message);
     return "";
@@ -266,4 +269,3 @@ async function main() {
 }
 
 main().then(() => process.exit(0)).catch((err) => { console.error(err); process.exit(1); });
-
