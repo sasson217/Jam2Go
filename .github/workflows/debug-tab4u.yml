@@ -1,0 +1,22 @@
+name: Debug Tab4U
+
+# One-off diagnostic - prints raw Tab4U responses so we can see if the search page is
+# scrapable at all. Not part of the app; safe to delete once the real Tab4U approach is settled.
+on:
+  workflow_dispatch: {}
+
+jobs:
+  debug:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Run debug script
+        run: node debugTab4u.js
+        working-directory: scripts
